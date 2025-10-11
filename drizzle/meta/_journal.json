@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1760006911733,
+      "tag": "0000_little_reavers",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1760006947849,
+      "tag": "0001_eminent_champions",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1760178080920,
+      "tag": "0002_bent_rogue",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1760178123291,
+      "tag": "0003_luxuriant_violations",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1760185018716,
+      "tag": "0004_acoustic_sphinx",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1760185327704,
+      "tag": "0005_nifty_quicksilver",
+      "breakpoints": true
+    }
+  ]
+}

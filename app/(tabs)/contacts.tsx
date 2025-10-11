@@ -1,31 +1,31 @@
-import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import * as Contacts from 'expo-contacts'
 import { Ionicons } from '@expo/vector-icons'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import Container from '@/components/Container'
+import { getContactsWithDebtSummary } from '@/lib/actions/contacts.actions'
+import { useRouter } from 'expo-router'
 
-export default function ContactsDemo() {
-  const [contacts, setContacts] = useState<Contacts.Contact[]>([])
-  const [filteredContacts, setFilteredContacts] = useState<Contacts.Contact[]>([])
+export default function ContactsListing() {
+  const router = useRouter()
+  const [contacts, setContacts] = useState<any[]>([])
+  const [filteredContacts, setFilteredContacts] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [permissionGranted, setPermissionGranted] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [selectedContacts, setSelectedContacts] = useState<Contacts.Contact[]>([])
+  const [selectedContacts, setSelectedContacts] = useState<any[]>([])
 
-  useEffect(() => {
-    fetchContacts()
-  }, [])
+  useEffect(() => { fetchContacts() }, [])
 
   useEffect(() => {
     if (searchQuery === '') {
       setFilteredContacts(contacts)
     } else {
       const query = searchQuery.toLowerCase()
-      const filtered = contacts.filter(contact => 
-        contact.name?.toLowerCase().includes(query) || 
-        contact.phoneNumbers?.some(phone => phone.number.includes(query))
-      )
+      const filtered = contacts.filter(contact => {
+        const nameMatch = contact.name?.toLowerCase().includes(query)
+        const phoneMatch = !!contact.phone && contact.phone.includes(query)
+        return nameMatch || phoneMatch
+      })
       setFilteredContacts(filtered)
     }
   }, [searchQuery, contacts])
@@ -33,33 +33,19 @@ export default function ContactsDemo() {
   const fetchContacts = async () => {
     try {
       setLoading(true)
-      const { status } = await Contacts.requestPermissionsAsync()
-      
-      if (status === 'granted') {
-        setPermissionGranted(true)
-        const { data } = await Contacts.getContactsAsync({
-          fields: [
-            Contacts.Fields.Name,
-            Contacts.Fields.PhoneNumbers,
-            Contacts.Fields.Emails,
-            Contacts.Fields.Image,
-          ],
-          sort: Contacts.SortTypes.FirstName,
-        })
-        
-        setContacts(data)
-        setFilteredContacts(data)
-      } else {
-        setPermissionGranted(false)
-      }
+      const dbContacts = await getContactsWithDebtSummary()
+      setContacts(dbContacts)
+      setFilteredContacts(dbContacts)
     } catch (error) {
-      console.error('Error fetching contacts:', error)
+      console.error('Error fetching contacts from DB:', error)
+      setContacts([])
+      setFilteredContacts([])
     } finally {
       setLoading(false)
     }
   }
 
-  const toggleContactSelection = (contact: Contacts.Contact) => {
+  const toggleContactSelection = (contact: any) => {
     if (selectedContacts.some(c => c.id === contact.id)) {
       setSelectedContacts(selectedContacts.filter(c => c.id !== contact.id))
     } else {
@@ -67,7 +53,7 @@ export default function ContactsDemo() {
     }
   }
 
-  const getContactInitials = (contact: Contacts.Contact) => {
+  const getContactInitials = (contact: any) => {
     if (!contact.name) return '?'
     const names = contact.name.split(' ')
     if (names.length >= 2) {
@@ -76,37 +62,45 @@ export default function ContactsDemo() {
     return contact.name.charAt(0).toUpperCase()
   }
 
-  const renderContactItem = ({ item }: { item: Contacts.Contact }) => {
+  const renderContactItem = ({ item }: { item: any }) => {
     const isSelected = selectedContacts.some(c => c.id === item.id)
-    
+    const netBalance = (item.totalOwed || 0) - (item.totalOwe || 0)
+    const balanceColor = netBalance > 0 ? 'text-green-600' : netBalance < 0 ? 'text-red-600' : 'text-gray-600'
+
     return (
       <TouchableOpacity 
-        className={`flex-row items-center p-4 border-b border-gray-100 ${isSelected ? 'bg-teal-50' : 'bg-white'}`}
-        onPress={() => toggleContactSelection(item)}
+        className={`flex-row items-center overflow-hidden flex-wrap p-4 mb-3 rounded-2xl ${isSelected ? 'bg-teal-50 border border-teal-200' : 'bg-white border border-gray-100'} shadow-sm`}
+        onPress={() => router.push(`/contact/${item.id}`)}
       >
-        <View className="mr-3">
-          {item.imageAvailable && item.image ? (
-            <Avatar className="w-12 h-12" alt='contact avatar'>
-              <AvatarImage source={{ uri: item.image.uri }} />
-            </Avatar>
-          ) : (
-            <Avatar className="w-12 h-12 bg-teal-100" alt='contact avatar'>
-              <AvatarFallback>
-                <Text className="text-teal-800 font-bold">{getContactInitials(item)}</Text>
-              </AvatarFallback>
-            </Avatar>
-          )}
+        <View className="mr-4">
+          <Avatar className="bg-teal-100 w-14 h-14" alt='contact avatar'>
+            <AvatarFallback>
+              <Text className="font-bold text-teal-800 text-lg">{getContactInitials(item)}</Text>
+            </AvatarFallback>
+          </Avatar>
         </View>
-        
+
         <View className="flex-1">
-          <Text className="font-semibold text-gray-800">{item.name || 'No Name'}</Text>
-          {item.phoneNumbers && item.phoneNumbers.length > 0 && (
-            <Text className="text-gray-500 text-sm">{item.phoneNumbers[0].number}</Text>
-          )}
+          <View className="flex-row justify-between items-start">
+            <View>
+              <Text className="font-bold text-gray-900 text-lg">{item.name || 'No Name'}</Text>
+              {item.phone && (
+                <Text className="text-gray-500">{item.phone}</Text>
+              )}
+            </View>
+            <View className="items-end">
+              <Text className={`font-bold ${balanceColor}`}>
+                {netBalance > 0 ? '+' : ''}KSh. {Math.abs(netBalance).toLocaleString()}
+              </Text>
+              <Text className="text-gray-400 text-xs">
+                {item.debtCount || 0} debt{item.debtCount !== 1 ? 's' : ''}
+              </Text>
+            </View>
+          </View>
         </View>
         
         {isSelected && (
-          <View className="w-6 h-6 rounded-full bg-teal-500 items-center justify-center">
+          <View className="justify-center items-center bg-teal-500 ml-2 rounded-full w-6 h-6">
             <Ionicons name="checkmark" size={16} color="white" />
           </View>
         )}
@@ -117,100 +111,95 @@ export default function ContactsDemo() {
   const renderEmptyState = () => {
     if (loading) {
       return (
-        <View className="flex-1 items-center justify-center py-10">
+        <View className="flex-1 justify-center items-center py-10">
           <ActivityIndicator size="large" color="#0d9488" />
-          <Text className="text-gray-500 mt-4">Loading contacts...</Text>
+          <Text className="mt-4 text-gray-500">Loading contacts...</Text>
         </View>
       )
     }
-    
-    if (!permissionGranted) {
-      return (
-        <View className="flex-1 items-center justify-center py-10 px-5">
-          <Ionicons name="lock-closed-outline" size={60} color="#cbd5e1" />
-          <Text className="text-gray-500 mt-4 text-center">
-            Permission to access contacts was denied. Please enable it in your device settings.
-          </Text>
-          <TouchableOpacity 
-            className="mt-6 bg-teal-600 py-3 px-6 rounded-full"
-            onPress={fetchContacts}
-          >
-            <Text className="text-white font-medium">Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      )
-    }
-    
+
     if (contacts.length === 0) {
       return (
-        <View className="flex-1 items-center justify-center py-10 px-5">
-          <Ionicons name="people-outline" size={60} color="#cbd5e1" />
-          <Text className="text-gray-500 mt-4 text-center">
-            No contacts found on your device.
+        <View className="flex-1 justify-center items-center px-5 py-10">
+          <View className="justify-center items-center bg-gray-100 mb-4 rounded-full w-20 h-20">
+            <Ionicons name="people-outline" size={36} color="#9ca3af" />
+          </View>
+          <Text className="mt-4 font-medium text-gray-800 text-lg">No contacts found</Text>
+          <Text className="mt-2 text-gray-500 text-center">
+            Add contacts to start tracking debts
           </Text>
         </View>
       )
     }
-    
+
     if (filteredContacts.length === 0) {
       return (
-        <View className="flex-1 items-center justify-center py-10 px-5">
-          <Ionicons name="search-outline" size={60} color="#cbd5e1" />
-          <Text className="text-gray-500 mt-4 text-center">
-            No contacts match your search query.
+        <View className="flex-1 justify-center items-center px-5 py-10">
+          <View className="justify-center items-center bg-gray-100 mb-4 rounded-full w-20 h-20">
+            <Ionicons name="search-outline" size={36} color="#9ca3af" />
+          </View>
+          <Text className="mt-4 font-medium text-gray-800 text-lg">No matches found</Text>
+          <Text className="mt-2 text-gray-500 text-center">
+            No contacts match your search query
           </Text>
         </View>
       )
     }
-    
+
     return null
   }
 
   return (
-      <View className="flex-1 bg-gray-50">
-        {/* Header */}
-        <View className="pt-12 pb-4 px-5 bg-white shadow-sm">
-          <Text className="text-2xl font-bold text-gray-800 mb-4">Your Contacts</Text>
-          
-          {/* Search Bar */}
-          <View className="flex-row items-center bg-gray-100 rounded-full px-4 py-3">
-            <Ionicons name="search" size={20} color="#64748b" className="mr-2" />
-            <TextInput
-              className="flex-1 text-gray-800"
-              placeholder="Search contacts..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#94a3b8"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color="#64748b" />
-              </TouchableOpacity>
-            )}
-          </View>
+    <View className="flex-1 bg-gray-50">
+      {/* Header */}
+      <View className="bg-white shadow-sm px-5 pt-12 pb-6">
+        <Text className="mb-4 font-bold text-gray-800 text-3xl">Your Contacts</Text>
+        <Text className="mb-4 text-gray-600">Manage your contacts and track debts</Text>
+        
+        {/* Search Bar */}
+        <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-full">
+          <Ionicons name="search" size={20} color="#64748b" className="mr-2" />
+          <TextInput
+            className="flex-1 text-gray-800"
+            placeholder="Search contacts..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#94a3b8"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color="#64748b" />
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
 
-        {/* Selection Info */}
-        {selectedContacts.length > 0 && (
-          <View className="px-5 py-3 bg-teal-50 flex-row items-center justify-between">
-            <Text className="text-teal-800 font-medium">
+      {/* Selection Info */}
+      {selectedContacts.length > 0 && (
+        <View className="flex-row justify-between items-center bg-teal-50 mx-5 mt-2 px-5 py-4 rounded-xl">
+          <View className="flex-row items-center">
+            <Ionicons name="checkmark-circle" size={20} color="#0d9488" className="mr-2" />
+            <Text className="font-medium text-teal-800">
               {selectedContacts.length} contact{selectedContacts.length !== 1 ? 's' : ''} selected
             </Text>
-            <TouchableOpacity onPress={() => setSelectedContacts([])}>
-              <Text className="text-teal-600">Clear</Text>
-            </TouchableOpacity>
           </View>
-        )}
+          <TouchableOpacity onPress={() => setSelectedContacts([])}>
+            <Text className="font-medium text-teal-600">Clear</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-        {/* Contacts List */}
-        <FlatList
-          data={filteredContacts}
-          renderItem={renderContactItem}
-          keyExtractor={(item) => item.id || Math.random().toString()}
-          ListEmptyComponent={renderEmptyState}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 20 }}
-        />
-      </View>
+      {/* Contacts List */}
+      <FlatList
+        data={filteredContacts}
+        renderItem={renderContactItem}
+        keyExtractor={(item) => item.id || Math.random().toString()}
+        ListEmptyComponent={renderEmptyState}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 }}
+      />
+
+
+    </View>
   )
 }

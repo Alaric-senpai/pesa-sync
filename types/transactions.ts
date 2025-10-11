@@ -1,4 +1,4 @@
-type transactionType = 'sent' | 'received';
+type transactionType = 'sent' | 'received' | 'lend' | 'borrow' | 'repayment';
 
 export interface Transaction {
   id: string;

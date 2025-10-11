@@ -1,11 +1,11 @@
 import React, { PropsWithChildren } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 
 const Container = ({ children }: PropsWithChildren) => {
   return (
-    <SafeAreaView className="flex-1 ">
+    <SafeAreaProvider className="flex-1">
       {children}
-    </SafeAreaView>
+    </SafeAreaProvider>
   )
 }
 

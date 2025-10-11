@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
 
 export default function ProfileScreen() {
-  const { username, phoneNumber } = useGlobalContext()
+  const { currentUser, logout } = useGlobalContext()
   const router = useRouter()
 
   // Profile menu items
@@ -88,49 +88,54 @@ export default function ProfileScreen() {
     },
   ]
 
-  const handleLogout = () => {
-    // Implement logout logic here
-    console.log('Logging out...')
-    // For example: navigation.replace('login')
+  const handleLogout = async () => {
+    try {
+      await logout()
+      console.log('✅ User logged out successfully')
+      router.replace('/onboarding')
+    } catch (error) {
+      console.error('❌ Logout failed:', error)
+    }
   }
 
   return (
       <ScrollView className="flex-1 bg-gray-50 mb-28" showsVerticalScrollIndicator={false}>
 
           <View className="items-center">
-            <Avatar alt="user avatar" className="w-72 h-72 rounded-full overflow-hidden border-4 border-white shadow-lg">
+            <Avatar alt="user avatar" className="shadow-lg border-4 border-white rounded-full w-72 h-72 overflow-hidden">
               <AvatarImage source={UserAvatar} />
               <AvatarFallback className="bg-teal-100">
-                <Text className="text-teal-800 font-bold text-3xl">{username?.charAt(0).toUpperCase()}</Text>
+                <Text className="font-bold text-teal-800 text-3xl">{currentUser?.name?.charAt(0).toUpperCase() || 'U'}</Text>
               </AvatarFallback>
             </Avatar>
             
-            <Text className=" text-2xl font-bold mt-4">{username}</Text>
-            <Text className=" text-lg mt-1">{phoneNumber}</Text>
+            <Text className="mt-4 font-bold text-2xl">{currentUser?.name || 'User'}</Text>
+            <Text className="mt-1 text-lg">{currentUser?.email || ''}</Text>
+            <Text className="mt-1 text-gray-600 text-base">{currentUser?.phone || ''}</Text>
             
             <TouchableOpacity 
-              className="mt-4 bg-black/20 backdrop-blur-sm px-6 py-2 rounded-full border border-black/30"
+              className="bg-black/20 backdrop-blur-sm mt-4 px-6 py-2 border border-black/30 rounded-full"
               onPress={() => router.push('/')}
             >
-              <Text className="text-white font-medium">Edit Profile</Text>
+              <Text className="font-medium text-white">Edit Profile</Text>
             </TouchableOpacity>
           </View>
 
         {/* Account Settings Section */}
         <View className="mt-6 px-5">
-          <Text className="text-gray-500 text-sm font-medium mb-3">ACCOUNT SETTINGS</Text>
-          <View className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <Text className="mb-3 font-medium text-gray-500 text-sm">ACCOUNT SETTINGS</Text>
+          <View className="bg-white shadow-sm rounded-2xl overflow-hidden">
             {accountSettings.map((item) => (
               <TouchableOpacity 
                 key={item.id} 
-                className="flex-row items-center justify-between p-4 border-b border-gray-100"
+                className="flex-row justify-between items-center p-4 border-gray-100 border-b"
                 onPress={item.onPress}
               >
                 <View className="flex-row items-center">
-                  <View className="w-10 h-10 rounded-full bg-teal-50 items-center justify-center mr-3">
+                  <View className="justify-center items-center bg-teal-50 mr-3 rounded-full w-10 h-10">
                     <Ionicons name={item.icon as any} size={22} color="#0d9488" />
                   </View>
-                  <Text className="text-gray-800 font-medium">{item.title}</Text>
+                  <Text className="font-medium text-gray-800">{item.title}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
               </TouchableOpacity>
@@ -140,19 +145,19 @@ export default function ProfileScreen() {
 
         {/* App Settings Section */}
         <View className="mt-6 px-5">
-          <Text className="text-gray-500 text-sm font-medium mb-3">APP SETTINGS</Text>
-          <View className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <Text className="mb-3 font-medium text-gray-500 text-sm">APP SETTINGS</Text>
+          <View className="bg-white shadow-sm rounded-2xl overflow-hidden">
             {appSettings.map((item) => (
               <TouchableOpacity 
                 key={item.id} 
-                className="flex-row items-center justify-between p-4 border-b border-gray-100"
+                className="flex-row justify-between items-center p-4 border-gray-100 border-b"
                 onPress={item.onPress}
               >
                 <View className="flex-row items-center">
-                  <View className="w-10 h-10 rounded-full bg-teal-50 items-center justify-center mr-3">
+                  <View className="justify-center items-center bg-teal-50 mr-3 rounded-full w-10 h-10">
                     <Ionicons name={item.icon as any} size={22} color="#0d9488" />
                   </View>
-                  <Text className="text-gray-800 font-medium">{item.title}</Text>
+                  <Text className="font-medium text-gray-800">{item.title}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
               </TouchableOpacity>
@@ -162,19 +167,19 @@ export default function ProfileScreen() {
 
         {/* Support Section */}
         <View className="mt-6 px-5">
-          <Text className="text-gray-500 text-sm font-medium mb-3">SUPPORT</Text>
-          <View className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <Text className="mb-3 font-medium text-gray-500 text-sm">SUPPORT</Text>
+          <View className="bg-white shadow-sm rounded-2xl overflow-hidden">
             {supportOptions.map((item) => (
               <TouchableOpacity 
                 key={item.id} 
-                className="flex-row items-center justify-between p-4 border-b border-gray-100"
+                className="flex-row justify-between items-center p-4 border-gray-100 border-b"
                 onPress={item.onPress}
               >
                 <View className="flex-row items-center">
-                  <View className="w-10 h-10 rounded-full bg-teal-50 items-center justify-center mr-3">
+                  <View className="justify-center items-center bg-teal-50 mr-3 rounded-full w-10 h-10">
                     <Ionicons name={item.icon as any} size={22} color="#0d9488" />
                   </View>
-                  <Text className="text-gray-800 font-medium">{item.title}</Text>
+                  <Text className="font-medium text-gray-800">{item.title}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
               </TouchableOpacity>
@@ -185,12 +190,12 @@ export default function ProfileScreen() {
         {/* Logout Button */}
         <View className="mt-6 mb-8 px-5">
           <TouchableOpacity 
-            className="bg-white rounded-2xl shadow-sm p-4 items-center"
+            className="items-center bg-white shadow-sm p-4 rounded-2xl"
             onPress={handleLogout}
           >
             <View className="flex-row items-center">
               <Ionicons name="log-out-outline" size={22} color="#ef4444" />
-              <Text className="text-red-500 font-medium ml-2">Log Out</Text>
+              <Text className="ml-2 font-medium text-red-500">Log Out</Text>
             </View>
           </TouchableOpacity>
         </View>
