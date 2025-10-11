@@ -39,8 +39,8 @@ const OnboardingPage = ({ title, subtitle, image, index }: OnboardingPageProps) 
       />
 
       </View>
-      <Text className="text-3xl font-bold text-center text-teal-800 mb-3">{title}</Text>
-      <Text className="text-lg text-center text-gray-600 leading-relaxed px-4">{subtitle}</Text>
+      <Text className="mb-3 font-bold text-teal-800 text-3xl text-center">{title}</Text>
+      <Text className="px-4 text-gray-600 text-lg text-center leading-relaxed">{subtitle}</Text>
     </View>
   );
 };
@@ -84,6 +84,7 @@ const Onboarding = () => {
 
   return (
       <Container>
+        <SafeAreaView className="flex-1 pb-4" >
         <PagerView
           style={{ flex: 1, width }}
           initialPage={0}
@@ -124,30 +125,38 @@ const Onboarding = () => {
             {currentPage < pages.length - 1 && (
               <TouchableOpacity 
                 onPress={handleSkipPress}
-                className="py-3 px-5 rounded-full bg-white/50 backdrop-blur-sm shadow-sm"
+                className="bg-white/50 shadow-sm backdrop-blur-sm px-5 py-3 rounded-full"
               >
-                <Text className="text-gray-600 font-medium">Skip</Text>
+                <Text className="font-medium text-gray-600">Skip</Text>
               </TouchableOpacity>
             )}
             
             {currentPage !== pages.length - 1 ? (
               <TouchableOpacity 
                 onPress={handleNextPress}
-                className="flex-row items-center justify-center py-3 px-6 rounded-full bg-teal-500  active:scale-95 transition-transform"
+                className="flex-row justify-center items-center bg-teal-500 px-6 py-3 rounded-full active:scale-95 transition-transform"
               >
-                <Text className="text-white font-semibold mr-1">Next</Text>
+                <Text className="mr-1 font-semibold text-white">Next</Text>
                 <Ionicons name="arrow-forward" size={18} color="white" />
               </TouchableOpacity>
             ) : (
-              <Link asChild href={'/setup'}>
-                <TouchableOpacity className="flex-1 flex-row items-center justify-center py-4 rounded-full bg-custom-secondarteal ">
-                  <Text className="text-white font-bold text-lg">Get Started</Text>
-                  <Ionicons name="arrow-forward" size={20} color="white" className="ml-2" />
-                </TouchableOpacity>
-              </Link>
+              <View className="flex-row flex-1 gap-3">
+                <Link asChild href={'/setup'}>
+                  <TouchableOpacity className="flex-row justify-center items-center bg-custom-primarygreen p-2 border-none rounded-full outline-none w-1/2">
+                    <Text className="font-bold text-md text-white">Create Account</Text>
+                  </TouchableOpacity>
+                </Link>
+                
+                <Link asChild href={'/login'}>
+                  <TouchableOpacity className="flex-row justify-center items-center bg-transparent p-2 border-2 border-custom-primaryblue rounded-full w-1/2">
+                    <Text className="font-bold text-custom-primaryblue text-lg">Login</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
             )}
           </View>
         </View>
+        </SafeAreaView>
       </Container>
   );
 };

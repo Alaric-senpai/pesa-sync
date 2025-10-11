@@ -46,7 +46,7 @@ module.exports = {
           primarygreen: 'hsl(163 94% 24%)',
           primaryblue: 'hsl(224 64% 33%)',
           accentred: 'hsl(0 72% 51%)',
-          secondarteal: 'hsl(180 100% 36%)',
+          secondaryteal: 'hsl(180 100% 36%)',
           background: 'hsl(210 20% 98%)',
           darktext: 'hsl(215 28% 17%)',
           subtletext: 'hsl(220 9% 46%)',

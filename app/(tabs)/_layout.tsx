@@ -5,15 +5,14 @@ import React from 'react'
 
 const TabsLayout = () => {
   return (
-    <Container>
-        <Tabs tabBar={(props)=> <CustomTabBar {...props} />} >
+    // <Container>
+        <Tabs tabBar={(props:any)=> <CustomTabBar {...props} />} >
             <Tabs.Screen name="index" options={{ headerShown: false, title: 'Home' }} />
-            <Tabs.Screen name="search" options={{ headerShown: false, title: 'Search' }} />
             <Tabs.Screen name="contacts" options={{ headerShown: false, title: 'Contacts' }} />
             <Tabs.Screen name="spending" options={{ headerShown: false, title: 'Spending' }} />
             <Tabs.Screen name="profile" options={{ headerShown: false, title: 'Profile' }} />
         </Tabs>
-    </Container>
+    // </Container>
   )
 }
 

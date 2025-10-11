@@ -1,15 +1,14 @@
+// @ts-nocheck
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native'
-import React from 'react'
+import React, { use } from 'react'
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import { useAnimatedStyle, withSpring, useSharedValue } from 'react-native-reanimated'
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  // Animation values for each tab
-  const tabAnimations = state.routes.map(() => useSharedValue(0))
-  
-  // Tab icons mapping
+
+  const insets = useSafeAreaInsets();
   const getIcon = (routeName: string, isFocused: boolean) => {
     const iconSize = 24
     const iconColor = isFocused ? '#0d9488' : '#64748b'
@@ -30,11 +29,8 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
     }
   }
 
-  // Handle tab press with animation
+  // Handle tab press
   const handleTabPress = (index: number, routeName: string, routeKey: string) => {
-    // Animate the tab
-    tabAnimations[index].value = withSpring(1, { damping: 15, stiffness: 150 })
-    
     // Navigate to the tab
     const event = navigation.emit({
       type: 'tabPress',
@@ -45,15 +41,10 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
     if (state.index !== index && !event.defaultPrevented) {
       navigation.navigate(routeName)
     }
-    
-    // Reset animation after a delay
-    setTimeout(() => {
-      tabAnimations[index].value = withSpring(0, { damping: 15, stiffness: 150 })
-    }, 300)
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { marginBottom: insets.bottom - 10 }]}>
       {/* Floating background with gradient */}
       <LinearGradient
         colors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)']}
@@ -66,24 +57,11 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
         
         {/* Tab buttons */}
         <View style={styles.tabsContainer}>
+
           {state.routes.map((route, index) => {
             const { options } = descriptors[route.key]
             const label = options.tabBarLabel || options.title || route.name
             const isFocused = state.index === index
-            
-            // Animated style for each tab
-            const animatedStyle = useAnimatedStyle(() => {
-              return {
-                transform: [
-                  {
-                    scale: withSpring(isFocused ? 1.1 : 1, {
-                      damping: 15,
-                      stiffness: 150,
-                    }),
-                  },
-                ],
-              }
-            })
             
             return (
               <Pressable
@@ -98,9 +76,9 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                     target: route.key,
                   })
                 }}
-                style={styles.tabButton}
+                style={[styles.tabButton, { transform: [{ scale: isFocused ? 1.1 : 1 }] }]}
               >
-                <View style={animatedStyle} className='flex-1 items-center justify-center'>
+                <View className='flex-1 justify-center items-center'>
                   {getIcon(route.name, isFocused)}
                   {isFocused && (
                     <View style={styles.activeIndicator}>
@@ -187,7 +165,7 @@ const styles = StyleSheet.create({
   },
   activeText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 7,
     fontWeight: 'bold',
   },
 })
