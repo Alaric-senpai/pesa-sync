@@ -14,24 +14,6 @@ export default function ProfileScreen() {
 
   // Profile menu items
   const accountSettings = [
-    // { 
-    //   id: '1', 
-    //   title: 'Edit Profile', 
-    //   icon: 'person-outline', 
-    //   onPress: () => router.push('/')
-    // },
-    // { 
-    //   id: '2', 
-    //   title: 'Change Password', 
-    //   icon: 'lock-closed-outline', 
-    //   onPress: () => router.push('/')
-    // },
-    // { 
-    //   id: '3', 
-    //   title: 'Payment Methods', 
-    //   icon: 'card-outline', 
-    //   onPress: () => router.push('/')
-    // },
     { 
       id: '4', 
       title: 'Notification Settings', 
@@ -41,18 +23,6 @@ export default function ProfileScreen() {
   ]
 
   const appSettings = [
-    // { 
-    //   id: '5', 
-    //   title: 'Appearance', 
-    //   icon: 'color-palette-outline', 
-    //   onPress: () => router.push('/')
-    // },
-    // { 
-    //   id: '6', 
-    //   title: 'Language', 
-    //   icon: 'language-outline', 
-    //   onPress: () => router.push('/')
-    // },
     { 
       id: '7', 
       title: 'Privacy & Security', 
@@ -99,27 +69,33 @@ export default function ProfileScreen() {
   }
 
   return (
+    <Container>
       <ScrollView className="flex-1 bg-gray-50 mb-28" showsVerticalScrollIndicator={false}>
-
+        {/* Profile Header */}
+        <LinearGradient
+          colors={['#0d9488', '#0f766e']}
+          className="pt-12 pb-8 px-5 rounded-b-3xl"
+        >
           <View className="items-center">
-            <Avatar alt="user avatar" className="shadow-lg border-4 border-white rounded-full w-72 h-72 overflow-hidden">
+            <Avatar alt="user avatar" className="shadow-lg border-4 border-white rounded-full w-24 h-24 overflow-hidden">
               <AvatarImage source={UserAvatar} />
               <AvatarFallback className="bg-teal-100">
                 <Text className="font-bold text-teal-800 text-3xl">{currentUser?.name?.charAt(0).toUpperCase() || 'U'}</Text>
               </AvatarFallback>
             </Avatar>
             
-            <Text className="mt-4 font-bold text-2xl">{currentUser?.name || 'User'}</Text>
-            <Text className="mt-1 text-lg">{currentUser?.email || ''}</Text>
-            <Text className="mt-1 text-gray-600 text-base">{currentUser?.phone || ''}</Text>
+            <Text className="mt-4 font-bold text-white text-2xl">{currentUser?.name || 'User'}</Text>
+            <Text className="mt-1 text-teal-100 text-lg">{currentUser?.email || ''}</Text>
+            <Text className="mt-1 text-teal-200 text-base">{currentUser?.phone || ''}</Text>
             
             <TouchableOpacity 
-              className="bg-black/20 backdrop-blur-sm mt-4 px-6 py-2 border border-black/30 rounded-full"
+              className="bg-white/20 backdrop-blur-sm mt-4 px-6 py-2 border border-white/30 rounded-full"
               onPress={() => router.push('/')}
             >
               <Text className="font-medium text-white">Edit Profile</Text>
             </TouchableOpacity>
           </View>
+        </LinearGradient>
 
         {/* Account Settings Section */}
         <View className="mt-6 px-5">
@@ -188,9 +164,9 @@ export default function ProfileScreen() {
         </View>
 
         {/* Logout Button */}
-        <View className="mt-6 mb-8 px-5">
+        <View className="mt-8 mb-8 px-5">
           <TouchableOpacity 
-            className="items-center bg-white shadow-sm p-4 rounded-2xl"
+            className="items-center bg-red-50 p-4 rounded-2xl"
             onPress={handleLogout}
           >
             <View className="flex-row items-center">
@@ -205,5 +181,6 @@ export default function ProfileScreen() {
           <Text className="text-gray-400 text-sm">Pesa Sync v1.0.0</Text>
         </View>
       </ScrollView>
+    </Container>
   )
 }

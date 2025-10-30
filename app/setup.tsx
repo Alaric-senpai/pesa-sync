@@ -73,6 +73,8 @@ export default function SetupAccount() {
                 className="flex-1" 
                 contentContainerClassName="pb-8"
                 showsVerticalScrollIndicator={false}
+                keyboardDismissMode='interactive'
+                keyboardShouldPersistTaps={'handled'}
             >
                 <KeyboardAvoidingView 
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -293,6 +295,8 @@ export default function SetupAccount() {
                                             <Text className="font-semibold text-teal-700">Login Here</Text>
                                         </TouchableOpacity>
                                     </View>
+
+                                    <View className='min-h-24' />
                                 </CardContent>
                             </Card>
                         </View>

@@ -16,18 +16,7 @@ import  { Toast } from 'toastify-react-native'
 import { getAllContacts, getAllDebts } from '@/lib/actions'
 import DebtCard from '@/components/DebtCard'
 
-// const spendingCategories = [
-//   { id: '1', name: 'Food', icon: 'restaurant', color: '#FF6B6B' },
-//   { id: '2', name: 'Transport', icon: 'car', color: '#4ECDC4' },
-//   { id: '3', name: 'Shopping', icon: 'shopping-bag', color: '#FFD166' },
-//   { id: '4', name: 'Entertainment', icon: 'film', color: '#6A0572' },
-//   { id: '5', name: 'Health', icon: 'heart', color: '#1A936F' },
-//   { id: '6', name: 'Utilities', icon: 'zap', color: '#114B5F' },
-//   { id: '7', name: 'Education', icon: 'book', color: '#F45B69' },
-//   { id: '8', name: 'Travel', icon: 'map-pin', color: '#2A9D8F' },
-//   { id: '9', name: 'Gifts', icon: 'gift', color: '#E76F51' },
-//   { id: '10', name: 'Others', icon: 'more-horizontal', color: '#6C757D' },
-// ];
+
 
 export default function HomeScreen() {
   const { defaultAccount } = useGlobalContext()
@@ -215,18 +204,6 @@ export default function HomeScreen() {
 
 }
 
-const SpendingCategoryCreateButton = () => {
-  return (
-    <Link href='/spendingcategory' asChild>
-      <Pressable className="justify-center items-center bg-white shadow-sm mr-3 border border-teal-300 border-dashed rounded-2xl w-20 h-20">
-        <View className="justify-center items-center bg-teal-50 mb-2 rounded-full w-10 h-10">
-          <Icon as={Plus} size={20} className="text-teal-600" />
-        </View>
-        <Text className="font-medium text-teal-600 text-xs text-center">Add</Text>
-      </Pressable>
-    </Link>
-  )
-}
 
 const styles = StyleSheet.create({
   balanceCard: {

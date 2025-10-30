@@ -10,12 +10,11 @@ import { useGlobalContext } from '@/context/GlobalContext'
 import { Debt, Payment, Contact } from '@/types/debts'
 import { Ionicons } from '@expo/vector-icons'
 import { format } from 'date-fns'
-import { de } from 'zod/v4/locales'
 
 export default function DebtDetail(): React.ReactElement {
   const params = useLocalSearchParams()
   const router = useRouter()
-  const { currentUser } = useGlobalContext()
+  const { currentUser, refreshAccount, applyPaymentOptimistic } = useGlobalContext()
   const id = Number(params.id)
 
   const [debt, setDebt] = useState<Debt | null>(null)
@@ -26,7 +25,6 @@ export default function DebtDetail(): React.ReactElement {
   const [payAmount, setPayAmount] = useState('')
   const [note, setNote] = useState('')
 
-  console.log(debt)
   const load = async () => {
     setLoading(true)
     try {
@@ -59,35 +57,62 @@ export default function DebtDetail(): React.ReactElement {
       Toast.error('Enter a valid amount'); 
       return 
     }
+  // Apply optimistic update to global account balances so the UI updates immediately.
+  const revert = debt ? applyPaymentOptimistic(debt.direction, amt) : () => {}
     try {
       await payDebt({ debtId: id, userId: currentUser?.id || 1, amount: amt, evidenceMessage: note })
       Toast.success('Payment recorded')
       setPayModalVisible(false)
+      // Refresh local view
       await load()
+      // Refresh global account balances to ensure eventual consistency with DB
+      try { if (refreshAccount) await refreshAccount() } catch (err) { console.warn('refreshAccount failed', err) }
     } catch (e) {
+      // Revert optimistic update on failure
+      try { revert && revert() } catch (re) { console.warn('revert failed', re) }
       console.warn('Payment failed', e)
       Toast.error(e instanceof Error ? e.message : 'Payment failed')
     }
   }
 
   const onSettle = async () => {
+  // Settlement may create a final payment; optimistically apply the remaining amount
+  const remaining = debt ? Math.max(0, (debt.amount || 0) - (debt.paid || 0)) : 0
+  const revertSettle = debt ? applyPaymentOptimistic(debt.direction, remaining) : () => {}
     try {
       await settleDebt(id, currentUser?.id || 1)
       Toast.success('Debt settled')
+      // Refresh local view
       await load()
+      // Refresh global balances
+      try { if (refreshAccount) await refreshAccount() } catch (err) { console.warn('refreshAccount failed', err) }
     } catch (e) {
+      // revert optimistic update
+      try { revertSettle && revertSettle() } catch (re) { console.warn('revert failed', re) }
       console.warn('Settle failed', e)
       Toast.error(e instanceof Error ? e.message : 'Failed to settle debt')
     }
   }
 
   const onDelete = async () => {
+    // Check if debt can be deleted
+    if (settledFlag || remaining <= 0 || payments.length > 1) {
+      Alert.alert(
+        'Cannot Delete Debt',
+        'This debt cannot be deleted because it has multiple payments or is already settled.',
+        [{ text: 'OK', style: 'cancel' }]
+      )
+      return
+    }
+    
     Alert.alert('Delete debt', 'Are you sure you want to delete this debt and all related records?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
         try {
           await deleteDebt(id, currentUser?.id || 1)
           Toast.success('Debt deleted')
+          // Refresh global balances then navigate home
+          try { if (refreshAccount) await refreshAccount() } catch (err) { console.warn('refreshAccount failed', err) }
           router.replace('/')
         } catch (e) {
           console.warn('Delete failed', e)
@@ -111,33 +136,40 @@ export default function DebtDetail(): React.ReactElement {
   const isOwedToUser = debt.direction === 'owed_to_me'
   const statusColor = isOwedToUser ? 'text-green-600' : 'text-red-600'
   const progressColor = isOwedToUser ? 'bg-green-500' : 'bg-red-500'
+  const badgeColor = isOwedToUser ? 'bg-green-100' : 'bg-red-100'
+  const badgeTextColor = isOwedToUser ? 'text-green-800' : 'text-red-800'
+  
+  // Normalize settled flag (stored as 0|1 or boolean in DB) and determine if fully settled
+  const settledFlag = debt.settled === 1 || debt.settled === true
+  const isFullySettled = settledFlag || remaining <= 0
 
   return (
     <Container>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-2 pt-12 pb-4">
-          <View className="flex-row items-center mb-8">
-            <TouchableOpacity 
-              onPress={() => router.back()} 
-              className="justify-center items-center bg-white shadow-sm mr-4 rounded-full w-12 h-12"
-            >
-              <Ionicons name="arrow-back" size={24} color="#4b5563" />
-            </TouchableOpacity>
-            <View>
-              <Text className="font-bold text-gray-800 text-3xl">Debt Details</Text>
+        <View className="px-5 pt-12 pb-24">
+          {/* Header */}
+          <View className="flex-row items-center justify-between mb-6">
+            <View className="flex-row items-center">
+              <TouchableOpacity 
+                onPress={() => router.back()} 
+                className="justify-center items-center bg-white shadow-sm mr-4 rounded-full w-10 h-10"
+              >
+                <Ionicons name="arrow-back" size={22} color="#4b5563" />
+              </TouchableOpacity>
+              <Text className="font-bold text-gray-800 text-2xl">Debt Details</Text>
+            </View>
+            <View className={`px-3 py-1 rounded-full ${badgeColor}`}>
+              <Text className={`font-medium text-sm ${badgeTextColor}`}>
+                {isOwedToUser ? 'Owed to you' : 'You owe'}
+              </Text>
             </View>
           </View>
 
-        <View className={`p-3 rounded-full ${isOwedToUser ? 'bg-green-100' : 'bg-red-100'}`}>
-        <Text className={`font-medium ${isOwedToUser ? 'text-green-800' : 'text-red-800'}`}>
-            {isOwedToUser ? 'Owed to you' : 'You owe'}
-        </Text>
-        </View>
-          {/* Contact information card */}
-          <View className="bg-white shadow-sm mb-6 p-6 rounded-2xl">
-            <View className="flex-row items-center mb-6">
-              <View className="justify-center items-center bg-teal-100 mr-4 rounded-full w-16 h-16">
-                <Ionicons name="person" size={28} color="#0d9488" />
+          {/* Contact Card */}
+          <View className="bg-white shadow-sm mb-6 p-5 rounded-2xl">
+            <View className="flex-row items-center">
+              <View className="justify-center items-center bg-teal-100 mr-4 rounded-full w-14 h-14">
+                <Ionicons name="person" size={24} color="#0d9488" />
               </View>
               <View className="flex-1">
                 <Text className="font-bold text-gray-900 text-xl">
@@ -148,27 +180,32 @@ export default function DebtDetail(): React.ReactElement {
                 )}
               </View>
             </View>
+          </View>
+
+          {/* Debt Summary */}
+          <View className="bg-white shadow-sm mb-6 p-5 rounded-2xl">
+            <Text className="mb-4 font-bold text-gray-900 text-lg">Debt Summary</Text>
             
-            <View className="space-y-4">
-              <View className="flex-row justify-between items-center">
+            <View className="space-y-3">
+              <View className="flex-row justify-between">
                 <Text className="text-gray-600">Total Amount</Text>
-                <Text className="font-bold text-gray-900 text-xl">KSh. {Number(debt.amount).toLocaleString()}</Text>
+                <Text className="font-bold text-gray-900 text-lg">KSh. {Number(debt.amount).toLocaleString()}</Text>
               </View>
               
-              <View className="flex-row justify-between items-center">
+              <View className="flex-row justify-between">
                 <Text className="text-gray-600">Paid</Text>
                 <Text className="font-bold text-gray-900">KSh. {Number(debt.paid || 0).toLocaleString()}</Text>
               </View>
               
-              <View className="flex-row justify-between items-center">
+              <View className="flex-row justify-between">
                 <Text className="text-gray-600">Remaining</Text>
-                <Text className={`font-bold text-xl ${statusColor}`}>KSh. {remaining.toLocaleString()}</Text>
+                <Text className={`font-bold text-lg ${statusColor}`}>KSh. {remaining.toLocaleString()}</Text>
               </View>
             </View>
           </View>
 
-          {/* Progress card */}
-          <View className="bg-white shadow-sm mb-6 p-6 rounded-2xl">
+          {/* Progress */}
+          <View className="bg-white shadow-sm mb-6 p-5 rounded-2xl">
             <Text className="mb-4 font-bold text-gray-900 text-lg">Payment Progress</Text>
             
             <View className="mb-3">
@@ -176,7 +213,7 @@ export default function DebtDetail(): React.ReactElement {
                 <Text className="text-gray-600">Completion</Text>
                 <Text className="font-medium text-gray-600">{progressPercentage.toFixed(0)}%</Text>
               </View>
-              <View className="bg-gray-200 rounded-full h-3 overflow-hidden">
+              <View className="bg-gray-200 rounded-full h-2.5 overflow-hidden">
                 <View 
                   className={`h-full ${progressColor}`} 
                   style={{ width: `${progressPercentage}%` }}
@@ -185,13 +222,13 @@ export default function DebtDetail(): React.ReactElement {
             </View>
             
             <View className="flex-row justify-between mt-4">
-              <View className="flex-1">
+              <View>
                 <Text className="text-gray-500 text-sm">Status</Text>
                 <Text className={`font-medium ${statusColor}`}>
-                  {debt.settled ? 'Settled' : remaining > 0 ? 'Partially Paid' : 'Fully Paid'}
+                  {settledFlag ? 'Settled' : remaining > 0 ? 'Partially Paid' : 'Fully Paid'}
                 </Text>
               </View>
-              <View className="flex-1 items-end">
+              <View className="items-end">
                 <Text className="text-gray-500 text-sm">Created</Text>
                 <Text className="text-gray-800">
                   {debt.createdAt ? format(new Date(debt.createdAt * 1000), 'MMM dd, yyyy') : ''}
@@ -200,47 +237,73 @@ export default function DebtDetail(): React.ReactElement {
             </View>
           </View>
 
-          {/* Actions card */}
-          <View className="bg-white shadow-sm mb-6 p-6 rounded-2xl">
+          {/* Actions */}
+          <View className="bg-white shadow-sm mb-6 p-5 rounded-2xl">
             <Text className="mb-4 font-bold text-gray-900 text-lg">Actions</Text>
             
-            <View className="flex-col gap-3">
-                {debt.settled == 0 && (
+            <View className="space-y-3">
+              {/* Only show Add Payment if debt is not fully settled */}
+              {!isFullySettled && (
                 <TouchableOpacity 
-                    onPress={() => setPayModalVisible(true)} 
-                    className="flex-row flex-1 justify-center items-center bg-white shadow-sm py-4 border border-gray-200 rounded-xl"
+                  onPress={() => setPayModalVisible(true)} 
+                  className="flex-row justify-center items-center bg-white border border-gray-200 py-3 rounded-xl"
                 >
-                    <Ionicons name="cash-outline" size={20} color="#4b5563" />
-                    <Text className="ml-2 font-medium text-gray-800">Add Payment</Text>
+                  <Ionicons name="cash-outline" size={20} color="#4b5563" />
+                  <Text className="ml-2 font-medium text-gray-800">Add Payment</Text>
                 </TouchableOpacity>
-
-                    )}
-
-              {debt.settled == 1 && (
-                <Text className="text-gray-500 text-sm text-center">Debt is already settled</Text>
               )}
-              {debt.settled == 0 && (
-              <TouchableOpacity 
-                onPress={onSettle} 
-                className="flex-row flex-1 justify-center items-center bg-teal-600 shadow-sm py-4 rounded-xl"
-              >
               
-                <Ionicons name="checkmark-circle-outline" size={20} color="white" />
-                <Text className="ml-2 font-medium text-white">Settle</Text>
-              </TouchableOpacity>
+              {/* Only show Settle if debt is not fully settled */}
+              {!isFullySettled && (
+                <TouchableOpacity 
+                  onPress={onSettle} 
+                  className="flex-row justify-center items-center bg-teal-600 py-3 rounded-xl"
+                >
+                  <Ionicons name="checkmark-circle-outline" size={20} color="white" />
+                  <Text className="ml-2 font-medium text-white">Settle</Text>
+                </TouchableOpacity>
               )}
+              
+              {/* Show message if debt is settled */}
+              {isFullySettled && (
+                <Text className="text-gray-500 text-center py-2">This debt is fully settled</Text>
+              )}
+              
+              {/* Delete button - always visible but disabled if not allowed */}
               <TouchableOpacity 
                 onPress={onDelete} 
-                className="flex-row flex-1 justify-center items-center bg-red-600 shadow-sm py-4 rounded-xl"
+                disabled={settledFlag || remaining <= 0 || payments.length > 1}
+                className={`flex-row justify-center items-center py-3 rounded-xl ${
+                  settledFlag || remaining <= 0 || payments.length > 1 
+                    ? 'bg-gray-200' 
+                    : 'bg-red-600'
+                }`}
               >
-                <Ionicons name="trash-outline" size={20} color="white" />
-                <Text className="ml-2 font-medium text-white">Delete</Text>
+                <Ionicons 
+                  name="trash-outline" 
+                  size={20} 
+                  color={settledFlag || remaining <= 0 || payments.length > 1 ? "#9ca3af" : "white"} 
+                />
+                <Text className={`ml-2 font-medium ${
+                  settledFlag || remaining <= 0 || payments.length > 1 
+                    ? 'text-gray-500' 
+                    : 'text-white'
+                }`}>
+                  Delete
+                </Text>
               </TouchableOpacity>
+              
+              {/* Show reason why delete is disabled */}
+              {(settledFlag || remaining <= 0 || payments.length > 1) && (
+                <Text className="text-gray-400 text-xs text-center">
+                  This debt cannot be deleted because it has multiple payments or is already settled
+                </Text>
+              )}
             </View>
           </View>
 
-          {/* Payments card */}
-          <View className="bg-white shadow-sm p-6 rounded-2xl">
+          {/* Payments */}
+          <View className="bg-white shadow-sm p-5 rounded-2xl">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="font-bold text-gray-900 text-lg">Payments</Text>
               <Text className="text-gray-500">{payments.length} payments</Text>
@@ -249,7 +312,7 @@ export default function DebtDetail(): React.ReactElement {
             {payments.length === 0 ? (
               <View className="flex-col items-center py-8">
                 <View className="justify-center items-center bg-gray-100 mb-4 rounded-full w-16 h-16">
-                  <Ionicons name="receipt-outline" size={28} color="#9ca3af" />
+                  <Ionicons name="receipt-outline" size={24} color="#9ca3af" />
                 </View>
                 <Text className="text-gray-500">No payments recorded</Text>
                 <Text className="mt-1 text-gray-400 text-sm">Add a payment to get started</Text>
@@ -258,8 +321,8 @@ export default function DebtDetail(): React.ReactElement {
               <View className="space-y-3">
                 {payments.map(p => (
                   <View key={p.id} className="bg-gray-50 p-4 rounded-xl">
-                    <View className="flex-row justify-between items-start">
-                      <View className="flex-1">
+                    <View className="flex-row justify-between">
+                      <View>
                         <Text className="font-bold text-gray-900 text-lg">KSh. {Number(p.amount).toLocaleString()}</Text>
                         <Text className="text-gray-500">
                           {p.createdAt ? format(new Date(p.createdAt * 1000), 'MMM dd, yyyy • h:mm a') : ''}
@@ -282,10 +345,10 @@ export default function DebtDetail(): React.ReactElement {
         </View>
       </ScrollView>
 
-      {/* Payment modal */}
+      {/* Payment Modal */}
       <Modal visible={payModalVisible} animationType="slide" transparent>
-        <View className="flex-1 justify-end bg-black/70">
-          <View className="bg-white shadow-lg p-6 rounded-t-3xl">
+        <View className="flex-1 justify-end bg-black/50">
+          <View className="bg-white rounded-t-3xl p-6">
             <View className="flex-row justify-between items-center mb-6">
               <Text className="font-bold text-gray-900 text-2xl">Add Payment</Text>
               <TouchableOpacity onPress={() => setPayModalVisible(false)} className="p-2">
@@ -310,7 +373,7 @@ export default function DebtDetail(): React.ReactElement {
             
             <Text className="mb-2 font-medium text-gray-700">Payment Amount</Text>
             <View className="relative mb-6">
-              <Text className="top-1/2 left-4 z-10 absolute -mt-2.5 text-gray-500">KSh.</Text>
+              <Text className="absolute top-4 left-4 text-gray-500">KSh.</Text>
               <TextInput 
                 value={payAmount} 
                 onChangeText={setPayAmount} 

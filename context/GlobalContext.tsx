@@ -37,6 +37,10 @@ type UserContextType = {
   isLoggedIn: boolean
   isLoading: boolean
   refreshAccount:()=>Promise<void>
+  // Apply an optimistic payment update to the locally-cached default account.
+  // Returns a revert function to restore the previous account state if the remote
+  // operation fails.
+  applyPaymentOptimistic: (direction: 'owed_to_me' | 'i_owe', amount: number) => () => void
   createAccount: (userData: CreateUserData) => Promise<{ success: boolean; user?: User; error?: string }>
   login: (username: string) => Promise<{ success: boolean; user?: User; error?: string }>
   logout: () => Promise<void>
@@ -139,6 +143,24 @@ export default function GlobalContext({ children }: { children: React.ReactNode 
     } catch (e) {
       console.warn('Failed to refresh account:', e)
     }
+  }
+
+  // Optimistically apply a payment to the local default account. This updates the
+  // in-memory `account` so the UI can reflect the new balances immediately.
+  // Returns a function to revert the change (useful when the remote call fails).
+  const applyPaymentOptimistic = (direction: 'owed_to_me' | 'i_owe', amount: number) => {
+    if (!account) return () => {}
+    const prev = { ...account }
+    const updated: any = { ...account }
+    if (direction === 'owed_to_me') {
+      // When someone owes the user, DebtedAmount is reduced on repayment
+      updated.DebtedAmount = Math.max(0, (updated.DebtedAmount || 0) - amount)
+    } else {
+      // When user owes someone, debtAmount is reduced on repayment
+      updated.debtAmount = Math.max(0, (updated.debtAmount || 0) - amount)
+    }
+    setAccount(updated)
+    return () => setAccount(prev)
   }
 
   const createAccount = async (userData: CreateUserData): Promise<{ success: boolean; user?: User; error?: string }> => {
@@ -316,6 +338,7 @@ export default function GlobalContext({ children }: { children: React.ReactNode 
     refreshAccount: RefreshAccount,
     isLoggedIn: !!currentUser,
     isLoading,
+    applyPaymentOptimistic,
     createAccount,
     login,
     logout,

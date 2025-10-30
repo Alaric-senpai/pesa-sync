@@ -12,6 +12,7 @@ import { router } from 'expo-router'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useGlobalContext } from '@/context/GlobalContext'
 import { Toast } from 'toastify-react-native'
+import ScrollableContainer from '@/components/ScrollableContainer'
 
 const loginSchema = z.object({
     username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -59,7 +60,7 @@ export default function LoginPage() {
     }
 
     return (
-        <Container>
+        <ScrollableContainer >
             <KeyboardAvoidingView 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 className="flex-1"
@@ -72,7 +73,7 @@ export default function LoginPage() {
                 </TouchableOpacity>
                 
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View className="flex-1 justify-center items-center px-6 pt-16">
+                    <View className="flex-1 justify-center items-center px-6 pt-16 w-full m-auto">
                         <View className="items-center mb-10">
                             <View className="justify-center items-center bg-teal-500 shadow-lg mb-4 rounded-full w-20 h-20">
                                 <Ionicons name="log-in-outline" size={40} color="white" />
@@ -153,6 +154,6 @@ export default function LoginPage() {
                     </View>
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
-        </Container>
+        </ScrollableContainer>
     )
 }
